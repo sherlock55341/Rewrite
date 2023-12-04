@@ -1,5 +1,5 @@
 #include "LUT.hpp"
-#include "LUT.inc"
+#include "LUT.lib"
 
 RW_NAMESPACE_START
 

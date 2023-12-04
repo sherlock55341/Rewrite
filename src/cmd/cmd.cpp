@@ -43,8 +43,6 @@ bool Cmd::parse(const std::string &line) {
         } else if (tokens[0] == "rewrite") {
             if (tokens.size() == 1) {
                 aigMan.rewrite();
-            } else if (tokens.size() == 2 && tokens[1] == "info") {
-                aigMan.printRWLog();
             } else {
                 printf("Error : rewrite format wrong\n");
             }

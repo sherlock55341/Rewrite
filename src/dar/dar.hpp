@@ -5,43 +5,69 @@
 
 RW_NAMESPACE_START
 
-class DarEngine{
-public:
-    DarEngine(LUT& lut_);
+class DarEngine {
+  public:
+    DarEngine(LUT &lut_);
 
     ~DarEngine();
 
-    void setAig(int nObjs_, int nPIs_, int nPOs_, int *pFanin0_, int *pFanin1_, int *pOuts_);
+    void rewrite(int nObjs_, int nPIs_, int nPOs_, int *pFanin0_, int *pFanin1_,
+                 int *pOuts_, bool useZero);
 
-    void rewrite(bool useZero, bool useGPU);
+    class Cut {
+      public:
+        int leaves[4];
+        unsigned sign;
+        unsigned truthTable : 16;
+        unsigned val : 11;
+        unsigned nLeaves : 4;
+        bool used;
+    };
+  private:
 
-    void copyAig(int &nObjs_, int &nPIs_, int &nPOs_, int *pFanin0_, int *pFanin1_, int *pOuts_, bool useGPU);
-
-    void printDarLog() const;
-private:    
     LUT &lut;
 
-    void resetDar();
-    
-    void rewriteCPUVersion(bool useZero);
+    int nObjs;
+    int nPIs;
+    int nPOs;
+    int nLevel;
 
-    void rewriteGPUVersion(bool useZero);
+    int *pFanin0 = nullptr;
+    int *pFanin1 = nullptr;
+    int *pOuts = nullptr;
+    int *levels = nullptr;
+    int *nRef = nullptr;
+    bool *del = nullptr;
 
-    // 0 for aig to dar, 1 for dar to aig
-    void convertFanArray(bool direction); 
+    std::vector<std::vector<int>> levelNodes;
 
-    void calcLevels();
+    int id(int x) const;
 
-    void copyAigCPU(int &nObjs_, int &nPIs_, int &nPOs_, int *pFanin0_, int *pFanin1_, int *pOuts_);
+    bool isC(int x) const;
 
-    int nObjs, nPIs, nPOs, nLevel;
+    int cutIdx(int x, int i) const;
 
-    int *pFanin0 = nullptr, *pFanin1 = nullptr, *isC0 = nullptr, *isC1 = nullptr, *pOuts = nullptr;
-    int *levels = nullptr, *levelCount = nullptr;
+    void calcLevelsAndReOrder();
 
-    int *d_pFanin0 = nullptr, *d_pFanin1 = nullptr;
+    void countRefs() const;
 
-    bool isDar = false;
+    void solveCutOneLevel(Cut *cuts, std::vector<int> &levelNode, int level);
+
+    int getCutValue(const Cut &cut) ;
+
+    int findCutPosition(Cut *cuts, int node);
+
+    bool mergeCut(const Cut &a, const Cut &b, Cut &c);
+
+    bool checkCutRedundant(Cut *cuts, int pos);
+    // check whether a is subset of b
+    bool checkCutSubset(const Cut &a, const Cut &b);
+
+    int cutPhase(const Cut &a, const Cut &b);
+
+    unsigned truthTableMerge(const Cut &a, const Cut &b, const Cut& c, bool isC0, bool isC1);
+
+    bool minimizeCut(Cut& cut);
 };
 
 RW_NAMESPACE_END

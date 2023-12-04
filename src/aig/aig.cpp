@@ -1,10 +1,10 @@
 #include "aig.hpp"
-#include "utils.hpp"
 #include <dar/dar.hpp>
+#include <utils/utils.hpp>
 
 RW_NAMESPACE_START
 
-AIGManager::AIGManager() : dar(lut) {
+AIGManager::AIGManager() {
     lut.readLUT();
     resetManager();
 }
@@ -92,12 +92,10 @@ int AIGManager::readAIGFromMemory(char *fc, size_t length) {
 
     pFanin0 = (int *)malloc(sizeof(int) * nObjs);
     pFanin1 = (int *)malloc(sizeof(int) * nObjs);
-    pNumFanouts = (int *)malloc(sizeof(int) * nObjs);
     pOuts = (int *)malloc(sizeof(int) * nPOs);
 
     memset(pFanin0, -1, sizeof(int) * nObjs);
     memset(pFanin1, -1, sizeof(int) * nObjs);
-    memset(pNumFanouts, 0, sizeof(int) * nObjs);
 
     while (*cur != ' ' && *cur != '\n') {
         cur++;
@@ -127,12 +125,7 @@ int AIGManager::readAIGFromMemory(char *fc, size_t length) {
         pFanin0[i] = ulit0;
         pFanin1[i] = ulit1;
 
-        ++pNumFanouts[ulit0 >> 1];
-        ++pNumFanouts[ulit1 >> 1];
-
         levels[i] = 1 + std::max(levels[ulit0 >> 1], levels[ulit1 >> 1]);
-        // std::cout << i << " " << (ulit0 >> 1) << " " << (ulit1 >> 1) <<
-        // std::endl;
     }
 
     nLevels = *std::max_element(levels.begin(), levels.end());
@@ -143,10 +136,10 @@ int AIGManager::readAIGFromMemory(char *fc, size_t length) {
 
     for (int i = 0; i < nOutputs_; i++) {
         pOuts[i] = atoi(cur);
-        ++pNumFanouts[pOuts[i] >> 1];
         while (*cur != '\n') {
             cur++;
         }
+        cur++;
     }
 
     aigCreated = true;
@@ -181,38 +174,13 @@ int AIGManager::saveAIG2File(const std::string &path) {
     return 0;
 }
 
-void AIGManager::printRWLog() const{
-    if(!aigCreated){
-        printf("Error : AIG is not constructed\n");
-        return ;
-    }
-    if(!usingDar){
-        printf("Error : rewrite is not used\n");
-        return ;
-    }
-    dar.printDarLog();
-}
-
 void AIGManager::rewrite() {
     if (!aigCreated) {
         printf("Error : rewrite cannot be done before AIG is created\n");
         return;
     }
-    aigNewest = false;
-    if(!usingDar){
-        usingDar = true;
-        dar.setAig(nObjs, nPIs, nPOs, pFanin0, pFanin1, pOuts);
-    }
-    dar.rewrite(false, false);
-}
-
-void AIGManager::copyFromDarCPU(){
-    if(!usingDar){
-        printf("Error : dar is not used, copy failed\n");
-        return ;
-    }
-    aigNewest = true;
-    dar.copyAig(nObjs, nPIs, nPOs, pFanin0, pFanin1, pOuts, false);
+    DarEngine dar(lut);
+    dar.rewrite(nObjs, nPIs, nPOs, pFanin0, pFanin1, pOuts, true);
 }
 
 RW_NAMESPACE_END
