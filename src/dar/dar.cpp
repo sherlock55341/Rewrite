@@ -1,10 +1,18 @@
 #include "dar.hpp"
 #include <utils/utils.hpp>
+#include <cpp/tools.hpp>
 
 RW_NAMESPACE_START
 
 constexpr size_t MAX_AIG_SIZE = 1e5;
 constexpr size_t MAX_CUT_SIZE = 8;
+constexpr int K_EMPTY = -1;
+
+inline size_t hash(size_t x) { return x; }
+
+inline size_t hash(size_t hash_1, size_t hash_2) {
+    return hash_1 ^ (hash_2 * 0x9e3779b9 + (hash_1 << 6) + (hash_1 >> 2));
+}
 
 DarEngine::DarEngine(LUT &lut_) : lut(lut_) {
     pFanin0 = (int *)malloc(sizeof(int) * MAX_AIG_SIZE);
@@ -32,12 +40,13 @@ void DarEngine::rewrite(int nObjs_, int nPIs_, int nPOs_, int *pFanin0_,
     nObjs = nObjs_;
     nPIs = nPIs_;
     nPOs = nPOs_;
+    BIG_PRIME = getNearestPrime(nObjs * 2);
     memcpy(pFanin0, pFanin0_, sizeof(int) * nObjs);
     memcpy(pFanin1, pFanin1_, sizeof(int) * nObjs);
     memcpy(pOuts, pOuts_, sizeof(int) * nPOs);
     memset(del, 0, sizeof(bool) * nObjs);
     calcLevelsAndReOrder();
-    printf("Before rewrite #node = %d, #level = %d\n", nObjs - 1, nLevel);
+    printf("    Before rewrite #node = %d, #level = %d\n", nObjs - 1, nLevel);
     countRefs();
 
     Cut *cuts = (Cut *)malloc(sizeof(Cut) * MAX_CUT_SIZE * nObjs);
@@ -58,9 +67,22 @@ void DarEngine::rewrite(int nObjs_, int nPIs_, int nPOs_, int *pFanin0_,
             totalCut++;
         }
     }
-    printf("#Cuts enumerated : %d\n", totalCut);
+    printf("    #Cuts enumerated : %d\n", totalCut);
+
+    hashTable = (TableNode*) malloc(sizeof(TableNode) * (BIG_PRIME + nObjs * 2));
+
+    printf("    Rewriting..., now memory usage = %.2lf MB, peak memory usage = %.2lf MB\n", utils::tools::MemReporter::getCurrent(), utils::tools::MemReporter::getPeak());
+
+    for (int i = 0; i < BIG_PRIME + nObjs * 2; i++){
+        hashTable[i].next = K_EMPTY;
+    }
+
+    buildHashTable();
 
     free(cuts);
+    free(hashTable);
+    cuts = nullptr;
+    hashTable = nullptr;
 }
 
 void DarEngine::calcLevelsAndReOrder() {
@@ -289,7 +311,7 @@ int DarEngine::cutPhase(const Cut &a, const Cut &b) {
 }
 
 unsigned DarEngine::truthTableMerge(const Cut &a, const Cut &b, const Cut &c,
-                                bool isC0, bool isC1) {
+                                    bool isC0, bool isC1) {
     unsigned aTruth = isC0 ? ~a.truthTable : a.truthTable;
     unsigned bTruth = isC1 ? ~b.truthTable : b.truthTable;
     aTruth = truthStretch(aTruth, a.nLeaves, cutPhase(a, c));
@@ -329,7 +351,8 @@ void countCut(RW::DarEngine::Cut *cuts) {
     for (int i = 0; i < MAX_CUT_SIZE; i++) {
         if (cuts[i].used == true) {
             printf("%d %d %d %d %d %u\n", cuts[i].nLeaves, cuts[i].leaves[0],
-                   cuts[i].leaves[1], cuts[i].leaves[2], cuts[i].leaves[3], cuts[i].truthTable);
+                   cuts[i].leaves[1], cuts[i].leaves[2], cuts[i].leaves[3],
+                   cuts[i].truthTable);
             total++;
         }
     }
@@ -415,6 +438,45 @@ void DarEngine::solveCutOneLevel(Cut *cuts, std::vector<int> &levelNode,
             // }
         }
     }
+}
+
+void DarEngine::buildHashTable(){
+    for (int i = 1; i <= nObjs; i++){
+        if(pFanin0[i] == 0 && pFanin1[i] == 0)
+            continue ;
+        int in0 = id(pFanin0[i]), in1 = id(pFanin1[i]);
+        bool isC0 = isC(pFanin0[i]), isC1 = isC(pFanin1[i]);
+        auto hashValue = hash(hash(in0, in1), hash(isC0, isC1)) % BIG_PRIME;
+        hashTable[BIG_PRIME + i - 1].value = i;
+        while(true){
+            if(hashValue >= BIG_PRIME + 2 * nObjs || hashValue < 0){
+                assert(false);
+            }
+            size_t res = (hashTable[hashValue].next == K_EMPTY ? BIG_PRIME + i - 1 : K_EMPTY);
+            hashTable[hashValue].next = res;
+            if(res == K_EMPTY){
+                break ;
+            }
+            else{
+                hashValue = res;
+            }
+        }   
+    }
+}
+
+int DarEngine::lookUp(int in0, int in1, bool isC0, bool isC1){
+    if(in0 > in1){
+        std::swap(in0, in1);
+        std::swap(isC0, isC1);
+    }
+    auto hashValue = hash(hash(in0, in1), hash(isC0, isC1)) % BIG_PRIME;
+    for (auto cur = hashTable[hashValue].next; cur != K_EMPTY; cur = hashTable[cur].next){
+        int idx = hashTable[cur].value;
+        if(id(pFanin0[idx]) == in0 && id(pFanin1[idx]) == in1 && isC(pFanin0[idx]) == isC0 && isC(pFanin1[idx]) == isC1){
+            return idx;
+        }
+    }
+    return K_EMPTY;
 }
 
 int DarEngine::id(int x) const { return x >> 1; }

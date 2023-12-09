@@ -1,6 +1,7 @@
 #include "aig.hpp"
 #include <dar/dar.hpp>
 #include <utils/utils.hpp>
+#include <cpp/tools.hpp>
 
 RW_NAMESPACE_START
 
@@ -43,6 +44,7 @@ int AIGManager::readAIGFromFile(const std::string &path) {
         designPath_ = path;
         designName_ = getDesignName(path);
     }
+    printf("    Read aig file finished, now memory usage %.2lf MB, peak memory usage %.2lf MB\n", utils::tools::MemReporter::getCurrent(), utils::tools::MemReporter::getPeak());
     return ret;
 }
 
@@ -171,6 +173,7 @@ int AIGManager::saveAIG2File(const std::string &path) {
     fprintf(fp, "%s\n", comments_.c_str());
     fclose(fp);
     delete[] buf;
+    printf("    Save aig file finished, now memory usage %.2lf MB, peak memory usage %.2lf MB\n", utils::tools::MemReporter::getCurrent(), utils::tools::MemReporter::getPeak());
     return 0;
 }
 

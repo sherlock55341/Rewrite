@@ -23,14 +23,20 @@ class DarEngine {
         unsigned nLeaves : 4;
         bool used;
     };
-  private:
 
+    struct TableNode {
+        int next;
+        int value;
+    };
+
+  private:
     LUT &lut;
 
     int nObjs;
     int nPIs;
     int nPOs;
     int nLevel;
+    int BIG_PRIME;
 
     int *pFanin0 = nullptr;
     int *pFanin1 = nullptr;
@@ -38,6 +44,8 @@ class DarEngine {
     int *levels = nullptr;
     int *nRef = nullptr;
     bool *del = nullptr;
+
+    TableNode* hashTable = nullptr;
 
     std::vector<std::vector<int>> levelNodes;
 
@@ -53,7 +61,7 @@ class DarEngine {
 
     void solveCutOneLevel(Cut *cuts, std::vector<int> &levelNode, int level);
 
-    int getCutValue(const Cut &cut) ;
+    int getCutValue(const Cut &cut);
 
     int findCutPosition(Cut *cuts, int node);
 
@@ -65,9 +73,14 @@ class DarEngine {
 
     int cutPhase(const Cut &a, const Cut &b);
 
-    unsigned truthTableMerge(const Cut &a, const Cut &b, const Cut& c, bool isC0, bool isC1);
+    unsigned truthTableMerge(const Cut &a, const Cut &b, const Cut &c,
+                             bool isC0, bool isC1);
 
-    bool minimizeCut(Cut& cut);
+    bool minimizeCut(Cut &cut);
+
+    void buildHashTable();
+
+    int lookUp(int in0, int in1, bool isC0, bool isC1);
 };
 
 RW_NAMESPACE_END

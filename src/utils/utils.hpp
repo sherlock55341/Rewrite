@@ -26,4 +26,8 @@ unsigned truthStretch(unsigned truth, int n, int phase);
 
 unsigned truthShrink(unsigned truth, int n, int phase);
 
+bool isPrime(int x);
+
+int getNearestPrime(int x);
+
 RW_NAMESPACE_END

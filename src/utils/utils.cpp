@@ -113,4 +113,21 @@ unsigned truthShrink(unsigned truth, int n, int phase){
     return truth;
 }
 
+bool isPrime(int x){
+    for (int i = 2; i * i <= x; i++){
+        if(x % i == 0){
+            return false;
+        }
+    }
+    return true;
+}
+
+int getNearestPrime(int x){
+    x++;
+    while(!isPrime(x)){
+        x++;
+    }
+    return x;
+}
+
 RW_NAMESPACE_END

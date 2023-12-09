@@ -1,7 +1,9 @@
 file(GLOB_RECURSE SRC_CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 file(GLOB_RECURSE CUDA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cu)
 
-set(INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+set(INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+                 ${UTIL_DIR})
+set(LINK_LIBS utils_lib_cxx utils_lib_cuda)
 
 find_package(CUDA)
 
@@ -25,4 +27,4 @@ add_executable(${PROJECT_NAME} ${SRC_CXX_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,--whole-archive -rdynamic -lpthread -Wl,--no-whole-archive")
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${CUDA_LINKED})
+target_link_libraries(${PROJECT_NAME} ${CUDA_LINKED} ${LINK_LIBS})
