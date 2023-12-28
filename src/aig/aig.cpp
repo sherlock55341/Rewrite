@@ -124,8 +124,8 @@ int AIGManager::readAIGFromMemory(char *fc, size_t length) {
         auto ulit1 = ulit - decode(&cur);
         auto ulit0 = ulit1 - decode(&cur);
 
-        pFanin0[i] = ulit0;
-        pFanin1[i] = ulit1;
+        pFanin0[i] = invert(ulit0);
+        pFanin1[i] = invert(ulit1);
 
         levels[i] = 1 + std::max(levels[ulit0 >> 1], levels[ulit1 >> 1]);
     }
@@ -136,13 +136,17 @@ int AIGManager::readAIGFromMemory(char *fc, size_t length) {
 
     cur = drivers;
 
+    // printf("outputs : ");
+
     for (int i = 0; i < nOutputs_; i++) {
-        pOuts[i] = atoi(cur);
+        pOuts[i] = invert(atoi(cur));
+        // printf("%d ", pOuts[i]);
         while (*cur != '\n') {
             cur++;
         }
         cur++;
     }
+    // printf("\n");
 
     aigCreated = true;
     return 0;
@@ -183,7 +187,17 @@ void AIGManager::rewrite() {
         return;
     }
     DarEngine dar(lut);
-    dar.rewrite(nObjs, nPIs, nPOs, pFanin0, pFanin1, pOuts, true);
+    dar.rewrite(nObjs, nPIs, nPOs, pFanin0, pFanin1, pOuts, false);
+
+    std::vector<int> levels(nObjs, -1);
+    for (int i = 1; i <= nPIs; i++){
+        levels[i] = 0;
+    }
+    for (int i = nPIs + 1; i < nObjs; i++){
+        levels[i] = 1 + std::max(levels[pFanin0[i] >> 1], levels[pFanin1[i] >> 1]);
+    }
+    nLevels = *std::max_element(levels.begin(), levels.end());
+    nNodes = nObjs - nPIs - 1;
 }
 
 RW_NAMESPACE_END

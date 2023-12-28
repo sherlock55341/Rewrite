@@ -74,7 +74,7 @@ int popCount(unsigned x) {
     return (x & MASK_16) + (x >> 16);
 }
 
-unsigned truthSwap(unsigned truth, int bias) {
+int truthSwap(int truth, int bias) {
     if(bias == 0)
         return (truth & 0x99999999) | ((truth & 0x22222222) << 1) |
                  ((truth & 0x44444444) >> 1);
@@ -87,7 +87,7 @@ unsigned truthSwap(unsigned truth, int bias) {
     return 0;
 }
 
-unsigned truthStretch(unsigned truth, int n, int phase) {
+int truthStretch(int truth, int n, int phase) {
     n--;
     for (int i = 3; i >= 0; i--) {
         if (phase >> i & 1) {
@@ -100,7 +100,7 @@ unsigned truthStretch(unsigned truth, int n, int phase) {
     return truth;
 }
 
-unsigned truthShrink(unsigned truth, int n, int phase){
+int truthShrink(int truth, int n, int phase){
     int var = 0;
     for (int i = 0; i < 4; i++){
         if(phase >> i & 1){
